@@ -90,9 +90,22 @@ async def service_items(subcategory: str, location_zone: str = Query(None), vill
     except Exception as e: return {"data": [], "error": str(e)}
 
 @router.get("/price_distribution")
-async def price_distribution():
-    try: return {"data": await menu_services.get_price_distribution()}
-    except Exception as e: return {"data": {}, "error": str(e)}
+async def price_distribution(service_item: str = Query(None), location_zone: str = Query(None), villa_code: str = Query(None)):
+    # Frontend wants total_customer_price for a service in the guest's location.
+    try:
+        if service_item:
+            # get_location_specific_price expects a villa_code; a real villa maps to a zone.
+            # If only a zone is given, base price is fine for the sandbox demo.
+            price_str = await menu_services.get_service_base_price(service_item)
+            if villa_code:
+                try: price_str = await menu_services.get_location_specific_price(service_item, villa_code)
+                except Exception: pass
+            digits = re.sub(r"[^\d]", "", str(price_str or ""))
+            total = int(digits) if digits else 0
+            return {"success": True, "total_customer_price": total, "service_item": service_item}
+        return {"success": True, "data": await menu_services.get_price_distribution()}
+    except Exception as e:
+        return {"success": False, "total_customer_price": 0, "error": str(e)}
 
 # ---- sheet-nav: Recommendations / Bali Handbook ----
 @router.get("/sheet-nav/categories/{main_menu:path}")
@@ -100,12 +113,12 @@ async def sn_categories(main_menu: str):
     try: return {"categories": _nav(await menu_services.get_sheet_menu_categories(main_menu), "category")}
     except Exception as e: return {"categories": [], "error": str(e)}
 
-@router.get("/sheet-nav/subcategories/{main_menu:path}")
-async def sn_subcategories(main_menu: str, category: str = Query(None)):
+@router.get("/sheet-nav/subcategories/{main_menu}/{category:path}")
+async def sn_subcategories(main_menu: str, category: str):
     try: return {"subcategories": _nav(await menu_services.get_sheet_menu_subcategories(main_menu, category), "subcategory")}
     except Exception as e: return {"subcategories": [], "error": str(e)}
 
-@router.get("/sheet-nav/sub-subcategories/{main_menu:path}")
-async def sn_subsub(main_menu: str, category: str = Query(None), subcategory: str = Query(None)):
+@router.get("/sheet-nav/sub-subcategories/{main_menu}/{category}/{subcategory:path}")
+async def sn_subsub(main_menu: str, category: str, subcategory: str):
     try: return {"sub_subcategories": _nav(await menu_services.get_sheet_menu_sub_subcategories(main_menu, category, subcategory), "sub_subcategory")}
     except Exception as e: return {"sub_subcategories": [], "error": str(e)}
