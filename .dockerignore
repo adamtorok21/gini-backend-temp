@@ -1,0 +1,14 @@
+.git
+__pycache__
+*.pyc
+.env
+*.json
+!easy-bali-b74b61110525.json
+venv
+.pytest_cache
+*.log
+docker-compose.yml
+Dockerfile
+.dockerignore
+node_modules
+tests
