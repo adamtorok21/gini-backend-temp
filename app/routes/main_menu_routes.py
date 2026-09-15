@@ -1,5 +1,6 @@
 # RECONSTRUCTED (sandbox) — menus + sheet-nav, wired to live Google Sheet CMS.
 from fastapi import APIRouter, Query
+import re
 from app.services import menu_services
 
 router = APIRouter(prefix="/menu", tags=["main_menu_routes"])
@@ -78,7 +79,14 @@ async def sub_alias(category: str, location_zone: str = Query(None), villa_code:
 
 @router.get("/service-items/{subcategory:path}")
 async def service_items(subcategory: str, location_zone: str = Query(None), villa_code: str = Query(None), language: str = Query(None)):
-    try: return {"data": await menu_services.get_service_items(subcategory, villa_code, location_zone) or []}
+    try:
+        items = await menu_services.get_service_items(subcategory, villa_code, location_zone) or []
+        for it in items:
+            if isinstance(it, dict) and it.get("button"):
+                digits = re.sub(r"[^\d]", "", str(it["button"]))
+                if digits:
+                    it["button"] = digits  # "10.000" (IDR thousands) -> "10000"
+        return {"data": items}
     except Exception as e: return {"data": [], "error": str(e)}
 
 @router.get("/price_distribution")
