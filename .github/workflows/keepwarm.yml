@@ -1,0 +1,13 @@
+name: keep-warm
+on:
+  schedule:
+    - cron: '*/10 * * * *'   # every 10 minutes
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend to prevent cold start
+        run: |
+          curl -s -m 60 https://gini-backend.onrender.com/ -o /dev/null -w "pinged: %{http_code} in %{time_total}s\n" || true
+          curl -s -m 60 "https://gini-backend.onrender.com/menu/villas" -o /dev/null -w "warmed menu: %{http_code}\n" || true
